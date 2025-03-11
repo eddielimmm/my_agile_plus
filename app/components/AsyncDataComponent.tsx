@@ -29,7 +29,12 @@ export function AsyncDataComponent() {
         }
       } catch (err) {
         if (isMounted) {
-          setError(err.message)
+          // Type-guard to check if err is an Error object
+          const errorMessage = err instanceof Error 
+            ? err.message 
+            : 'An unknown error occurred';
+          
+          setError(errorMessage)
           setIsLoading(false)
         }
       }
