@@ -23,20 +23,31 @@ interface TimeEntry {
   duration: number
 }
 
-interface Task {
+// Update this to match your task-context's Task interface
+interface CalendarProps {
+  tasks: {
+    id: number
+    title: string
+    size: TaskSize
+    dueDate: Date
+    isCompleted: boolean
+    timeEntries?: TimeEntry[]
+    priority?: TaskPriority
+    description?: string
+    [key: string]: any  // Accept any other properties from the task context
+  }[]
+}
+
+// This is the internal Task type used within the Calendar component
+interface CalendarTask {
   id: number
   title: string
   size: TaskSize
   dueDate: Date
   isCompleted: boolean
   timeSpent: number
-  timeEntries?: TimeEntry[]
   priority: TaskPriority
   description?: string
-}
-
-interface CalendarProps {
-  tasks: Task[]
 }
 
 const sizeColors = {
@@ -49,13 +60,15 @@ const sizeColors = {
 }
 
 export function Calendar({ tasks }: CalendarProps) {
+  // Map incoming tasks to our internal format with timeSpent
   const processedTasks = tasks.map(task => ({
     ...task,
-    timeSpent: task.timeSpent !== undefined ? task.timeSpent : 
-      (task.timeEntries ? task.timeEntries.reduce((total, entry) => total + (entry.duration || 0), 0) : 0)
-  }))
+    priority: task.priority || "Medium", // Set a default priority if missing
+    timeSpent: task.timeEntries ? 
+      task.timeEntries.reduce((total, entry) => total + (entry.duration || 0), 0) : 0
+  })) as CalendarTask[]
   
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [selectedTask, setSelectedTask] = useState<CalendarTask | null>(null)
   const [events, setEvents] = useState<any[]>([])
 
   useEffect(() => {
@@ -72,7 +85,7 @@ export function Calendar({ tasks }: CalendarProps) {
   }, [processedTasks])
 
   const eventStyleGetter = useCallback((event: any) => {
-    const task = event.resource as Task
+    const task = event.resource as CalendarTask
     return {
       style: {
         backgroundColor: sizeColors[task.size],
@@ -136,16 +149,16 @@ const EventComponent: React.FC<{ event: any }> = ({ event }) => (
   <Tooltip>
     <TooltipTrigger asChild>
       <div className="px-2 py-1 text-xs font-medium truncate">
-        {event.title} ({(event.resource as Task).size})
+        {event.title} ({(event.resource as CalendarTask).size})
       </div>
     </TooltipTrigger>
     <TooltipContent>
-      <TaskTooltip task={event.resource as Task} />
+      <TaskTooltip task={event.resource as CalendarTask} />
     </TooltipContent>
   </Tooltip>
 )
 
-const TaskTooltip: React.FC<{ task: Task }> = ({ task }) => (
+const TaskTooltip: React.FC<{ task: CalendarTask }> = ({ task }) => (
   <Card className="w-64 bg-white dark:bg-gray-700 shadow-lg">
     <CardContent className="p-4">
       <h3 className="font-bold mb-2 dark:text-gray-100">{task.title}</h3>
@@ -157,7 +170,7 @@ const TaskTooltip: React.FC<{ task: Task }> = ({ task }) => (
   </Card>
 )
 
-const TaskDetails: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose }) => (
+const TaskDetails: React.FC<{ task: CalendarTask; onClose: () => void }> = ({ task, onClose }) => (
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
     <Card className="w-full max-w-md bg-white dark:bg-gray-800 shadow-lg">
       <CardHeader>
