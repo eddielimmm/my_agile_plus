@@ -25,6 +25,8 @@ export function GoalPointsSummary() {
   }, [user])
 
   const fetchGoalSummary = async () => {
+    if (!user) return;
+    
     setIsLoading(true)
     try {
       // Fetch total goals

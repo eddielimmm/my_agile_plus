@@ -47,7 +47,11 @@ export function TimeDistributionChart() {
 
   const taskSizes = Object.keys(COLORS)
 
-  const hasData = data.some((entry) => Object.values(entry).some((value) => value > 0))
+  const hasData = data.some((entry) => 
+    Object.entries(entry).some(([key, value]) => 
+      key !== 'hour' && typeof value === 'number' && value > 0
+    )
+  )
 
   console.log("Time Distribution Data:", data) // Add this line for debugging
 

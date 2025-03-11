@@ -38,7 +38,7 @@ export function SprintGoalPointsInput() {
 
   // Get sprint tasks - with null check for currentSprint and currentSprint.tasks
   const sprintTasks =
-    currentSprint && currentSprint.tasks ? tasks.filter((task) => currentSprint.tasks.includes(task.id)) : []
+    currentSprint && currentSprint.tasks ? tasks.filter((task) => currentSprint.tasks.includes(String(task.id))) : []
 
   // Calculate current progress
   const totalCompletedPoints = sprintTasks
@@ -340,7 +340,6 @@ export function SprintGoalPointsInput() {
         <Progress
           value={progressPercentage}
           className="h-2 bg-gray-200 dark:bg-gray-700"
-          indicatorClassName="bg-indigo-500 dark:bg-indigo-400"
         />
 
         <div className="flex items-center space-x-2 mt-2">

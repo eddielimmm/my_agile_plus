@@ -138,7 +138,6 @@ export function SprintList({ onCreateSprint }: SprintListProps) {
                 <Progress
                   value={completionPercentage}
                   className="h-2 bg-gray-200 dark:bg-gray-700"
-                  indicatorClassName="bg-indigo-500 dark:bg-indigo-400"
                 />
               </div>
             </CardContent>

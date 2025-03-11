@@ -13,19 +13,27 @@ export async function updateReportTable(userId: string) {
   }
 
   // Calculate aggregated data
-  const totalTimeSpent = tasks.reduce((sum, task) => sum + task.timeEntries.reduce((s, e) => s + e.duration, 0), 0)
-  const completedTasks = tasks.filter((task) => task.isCompleted).length
-  const pointsEarned = tasks.reduce((sum, task) => (task.isCompleted ? sum + task.points : sum), 0)
+  const totalTimeSpent = tasks.reduce(
+    (sum: number, task: any) => 
+      sum + task.timeEntries.reduce(
+        (s: number, e: any) => s + e.duration, 
+        0
+      ), 
+    0
+  )
+  
+  const completedTasks = tasks.filter((task: any) => task.isCompleted).length
+  const pointsEarned = tasks.reduce((sum: number, task: any) => (task.isCompleted ? sum + task.points : sum), 0)
 
   // Calculate task size breakdown
-  const taskSizeBreakdown = tasks.reduce((acc, task) => {
+  const taskSizeBreakdown = tasks.reduce((acc: Record<string, number>, task: any) => {
     acc[task.size] = (acc[task.size] || 0) + 1
     return acc
   }, {})
 
   // Calculate time distribution
-  const timeDistribution = tasks.reduce((acc, task) => {
-    task.timeEntries.forEach((entry) => {
+  const timeDistribution = tasks.reduce((acc: Record<number, number>, task: any) => {
+    task.timeEntries.forEach((entry: any) => {
       const hour = new Date(entry.startTime).getHours()
       acc[hour] = (acc[hour] || 0) + entry.duration
     })
@@ -33,22 +41,25 @@ export async function updateReportTable(userId: string) {
   }, {})
 
   // Calculate completion time averages
-  const completionTimeAverages = tasks.reduce((acc, task) => {
+  const completionTimeRaw = tasks.reduce((acc: Record<string, number[]>, task: any) => {
     if (task.isCompleted) {
-      const totalTime = task.timeEntries.reduce((sum, entry) => sum + entry.duration, 0)
+      const totalTime = task.timeEntries.reduce((sum: number, entry: any) => sum + entry.duration, 0)
       if (!acc[task.size]) acc[task.size] = []
       acc[task.size].push(totalTime)
     }
     return acc
-  }, {})
+  }, {} as Record<string, number[]>)
 
-  Object.keys(completionTimeAverages).forEach((size) => {
-    const times = completionTimeAverages[size]
-    completionTimeAverages[size] = times.reduce((a, b) => a + b, 0) / times.length
-  })
+  // Calculate the averages in a separate object
+  const completionTimeAverages = Object.fromEntries(
+    Object.entries(completionTimeRaw).map(([size, times]) => [
+      size, 
+      times.length > 0 ? times.reduce((a: number, b: number) => a + b, 0) / times.length : 0
+    ])
+  )
 
   // Calculate monthly points
-  const monthlyPoints = tasks.reduce((acc, task) => {
+  const monthlyPoints = tasks.reduce((acc: Record<string, number>, task: any) => {
     if (task.isCompleted) {
       const monthKey = task.createdAt.toISOString().slice(0, 7)
       acc[monthKey] = (acc[monthKey] || 0) + task.points

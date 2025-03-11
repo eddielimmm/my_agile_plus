@@ -5,9 +5,11 @@ import { createContext, useContext, useState, useEffect } from "react"
 import { useAuth } from "./auth-context"
 import { supabase } from "@/lib/supabase"
 
-interface Folder {
+export interface Folder {
   id: string
   name: string
+  tasksCompleted?: number
+  totalTasks?: number
   created_at: string
 }
 

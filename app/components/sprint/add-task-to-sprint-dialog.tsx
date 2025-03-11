@@ -27,7 +27,7 @@ export function AddTaskToSprintDialog({ isOpen, onClose, sprintId }: AddTaskToSp
   // Filter out tasks that are already in the sprint
   const availableTasks = tasks.filter(
     (task) =>
-      !sprint?.tasks.includes(task.id) &&
+      !sprint?.tasks.includes(String(task.id)) &&
       (searchQuery === "" || task.title.toLowerCase().includes(searchQuery.toLowerCase())),
   )
 
@@ -39,8 +39,12 @@ export function AddTaskToSprintDialog({ isOpen, onClose, sprintId }: AddTaskToSp
     }
   }, [isOpen])
 
-  const handleTaskToggle = (taskId: string) => {
-    setSelectedTasks((prev) => (prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]))
+  const handleTaskToggle = (taskId: number) => {
+    setSelectedTasks((prev) => 
+      prev.includes(String(taskId)) 
+        ? prev.filter((id) => id !== String(taskId)) 
+        : [...prev, String(taskId)]
+    )
   }
 
   const handleAddTasks = async () => {
@@ -79,7 +83,7 @@ export function AddTaskToSprintDialog({ isOpen, onClose, sprintId }: AddTaskToSp
                   <div key={task.id} className="flex items-start space-x-3 p-2 rounded hover:bg-gray-50">
                     <Checkbox
                       id={`task-${task.id}`}
-                      checked={selectedTasks.includes(task.id)}
+                      checked={selectedTasks.includes(String(task.id))}
                       onCheckedChange={() => handleTaskToggle(task.id)}
                     />
                     <div className="flex-1">

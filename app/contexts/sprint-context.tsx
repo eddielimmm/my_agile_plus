@@ -163,13 +163,14 @@ export function SprintProvider({ children }: { children: React.ReactNode }) {
       const sprint = sprints.find((s) => s.id === sprintId)
       if (!sprint) return
 
-      const updatedTasks = [...new Set([...sprint.tasks, ...taskIds])]
+      // Create a unique array without using Set spread
+      const uniqueTasks = Array.from(new Set([...sprint.tasks, ...taskIds]))
 
-      const { error } = await supabase.from("sprints").update({ tasks: updatedTasks }).eq("id", sprintId)
+      const { error } = await supabase.from("sprints").update({ tasks: uniqueTasks }).eq("id", sprintId)
 
       if (error) throw error
 
-      const updatedSprint = { ...sprint, tasks: updatedTasks }
+      const updatedSprint = { ...sprint, tasks: uniqueTasks }
       setSprints((prevSprints) => prevSprints.map((s) => (s.id === sprintId ? updatedSprint : s)))
 
       if (currentSprint?.id === sprintId) {

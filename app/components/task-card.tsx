@@ -46,6 +46,8 @@ interface Task {
   isCompleted: boolean
   priority?: TaskPriority
   description?: string
+  createdAt: Date
+  completedAt: Date | null
 }
 
 const getSizeColor = (size: TaskSize) => {
@@ -176,10 +178,21 @@ export function TaskCard({
         ...task,
         isCompleted: true,
         completedAt: new Date(),
+        createdAt: task.createdAt || new Date(),
+        timeEntries: task.timeEntries.map(entry => ({
+          ...entry,
+          startTime: entry.start_time || "00:00",
+          start_time: undefined
+        }))
       }
       await updateTask(updatedTask)
     } catch (error) {
-      console.error("Error completing task:", error.message || JSON.stringify(error))
+      // Handle the unknown error type safely
+      if (error instanceof Error) {
+        console.error("Error completing task:", error.message)
+      } else {
+        console.error("Error completing task:", String(error))
+      }
     }
   }
 

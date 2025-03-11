@@ -23,7 +23,11 @@ export function SignUp() {
       if (error) throw error
       router.push("/signin")
     } catch (error) {
-      setError(error.message)
+      if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        setError("An unexpected error occurred during sign up")
+      }
     }
   }
 

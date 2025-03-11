@@ -37,7 +37,7 @@ interface CreateTaskDialogProps {
 
 export function CreateTaskDialog({ isOpen, onClose, onCreateTask, folders }: CreateTaskDialogProps) {
   const [title, setTitle] = useState("")
-  const [size, setSize] = useState<TaskSize | null>(null)
+  const [size, setSize] = useState<string>("M")
   const [dueDate, setDueDate] = useState<Date>(new Date())
   const [dueTime, setDueTime] = useState("12:00")
   const [folder, setFolder] = useState<string>("none")
@@ -54,18 +54,20 @@ export function CreateTaskDialog({ isOpen, onClose, onCreateTask, folders }: Cre
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (title && size !== null && dueDate) {
+    if (title && size && dueDate) {
       const [hours, minutes] = dueTime.split(":").map(Number)
       const fullDueDate = new Date(dueDate)
       fullDueDate.setHours(hours, minutes)
 
       const newTask = {
         title,
-        size,
+        size: size as TaskSize,
         dueDate: fullDueDate,
         folder: folder === "none" ? undefined : folder,
         description: description || undefined,
-        points: getPointsForSize(size),
+        points: getPointsForSize(size as TaskSize),
+        timeEntries: [],
+        completedAt: null
       }
 
       onCreateTask(newTask)
@@ -109,7 +111,7 @@ export function CreateTaskDialog({ isOpen, onClose, onCreateTask, folders }: Cre
             <Label className="font-medium text-gray-700 dark:text-gray-300">Size</Label>
             <RadioGroup
               value={size}
-              onValueChange={(value) => setSize(value as TaskSize)}
+              onValueChange={(value) => setSize(value as string)}
               className="grid grid-cols-3 gap-2"
             >
               {taskSizes.map((taskSize) => (
@@ -186,7 +188,6 @@ export function CreateTaskDialog({ isOpen, onClose, onCreateTask, folders }: Cre
             <Select
               value={folder}
               onValueChange={setFolder}
-              className="dark:bg-gray-700 dark:text-white dark:border-gray-600"
             >
               <SelectTrigger className="h-10 border-2 dark:bg-gray-700 dark:text-white dark:border-gray-600">
                 <SelectValue placeholder="Select a folder" />
@@ -217,7 +218,7 @@ export function CreateTaskDialog({ isOpen, onClose, onCreateTask, folders }: Cre
 
           <Button
             type="submit"
-            disabled={!title || size === null || !dueDate}
+            disabled={!title || !size || !dueDate}
             className="w-full h-10 bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90 mt-2"
           >
             Create Task

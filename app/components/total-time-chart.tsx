@@ -28,8 +28,8 @@ export function TotalTimeChart() {
     const start = startOfWeek(dateRange[0])
     const end = dateRange[1]
 
-    let intervals
-    let formatString
+    let intervals: Date[]
+    let formatString: string
 
     switch (timeRange) {
       case "day":
@@ -96,15 +96,19 @@ export function TotalTimeChart() {
             <YAxis />
             <Tooltip
               content={({ active, payload, label }) => {
-                if (active && payload && payload.length) {
+                if (active && payload && payload.length > 0 && payload[0]?.value !== undefined) {
+                  const value = typeof payload[0].value === 'number' 
+                    ? payload[0].value.toFixed(2) 
+                    : Number(payload[0].value).toFixed(2);
+                  
                   return (
                     <div className="bg-white dark:bg-gray-800 p-2 border rounded shadow dark:border-gray-700">
                       <p className="text-gray-900 dark:text-gray-100">{`Date: ${payload[0].payload.displayDate}`}</p>
-                      <p className="text-gray-900 dark:text-gray-100">{`Hours: ${payload[0].value.toFixed(2)}`}</p>
+                      <p className="text-gray-900 dark:text-gray-100">{`Hours: ${value}`}</p>
                     </div>
-                  )
+                  );
                 }
-                return null
+                return null;
               }}
             />
             <Bar dataKey="hours" fill="#81c784" key="total-time-bar">

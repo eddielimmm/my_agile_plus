@@ -105,7 +105,7 @@ export function PatternRecognition() {
                           <p className="text-gray-900 dark:text-gray-100">{`Hour: ${label}`}</p>
                           {payload.map((entry, index) => (
                             <p key={index} className="text-gray-900 dark:text-gray-100">
-                              {`${entry.name}: ${entry.value.toFixed(2)}`}
+                              {`${entry.name}: ${typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value}`}
                             </p>
                           ))}
                         </div>
@@ -150,7 +150,7 @@ export function PatternRecognition() {
                           <p className="text-gray-900 dark:text-gray-100">{`Hour: ${label}`}</p>
                           {payload.map((entry, index) => (
                             <p key={index} className="text-gray-900 dark:text-gray-100">
-                              {`${entry.name}: ${entry.value.toFixed(2)}`}
+                              {`${entry.name}: ${typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value}`}
                             </p>
                           ))}
                         </div>

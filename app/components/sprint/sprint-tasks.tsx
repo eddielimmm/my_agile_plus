@@ -14,7 +14,7 @@ export function SprintTasks({ sprint }: SprintTasksProps) {
   const { removeTaskFromSprint } = useSprintContext()
 
   const handleTaskCompletion = (taskId: string, isCompleted: boolean) => {
-    const task = tasks.find((t) => t.id === taskId)
+    const task = tasks.find((t) => t.id.toString() === taskId)
     if (task) {
       updateTask({ ...task, isCompleted })
     }
@@ -76,17 +76,29 @@ export function SprintTasks({ sprint }: SprintTasksProps) {
 
   return (
     <div className="space-y-4">
-      {sprintTasks.map((task) => (
-        <TaskCard
-          key={task.id}
-          task={task}
-          onEdit={handleEditTask}
-          onDelete={handleDeleteTask}
-          onComplete={(updatedTask) => handleTaskCompletion(updatedTask.id.toString(), updatedTask.isCompleted)}
-          onRemoveFromSprint={() => handleRemoveTask(task.id.toString())}
-          isInSprint={true}
-        />
-      ))}
+      {sprintTasks.map((task) => {
+        // Remove priority from task object
+        const { priority, ...taskWithoutPriority } = task;
+        
+        return (
+          <TaskCard
+            key={task.id}
+            task={{
+              ...taskWithoutPriority,
+              folder: task.folder || "none",  // Ensure folder is never undefined
+              timeEntries: task.timeEntries.map(entry => ({
+                ...entry,
+                start_time: entry.startTime || "00:00" // Use startTime instead of start_time
+              }))
+            }}
+            onEdit={handleEditTask}
+            onDelete={handleDeleteTask}
+            onComplete={(updatedTask) => handleTaskCompletion(updatedTask.id.toString(), updatedTask.isCompleted)}
+            onRemoveFromSprint={() => handleRemoveTask(task.id.toString())}
+            isInSprint={true}
+          />
+        );
+      })}
     </div>
   )
 }

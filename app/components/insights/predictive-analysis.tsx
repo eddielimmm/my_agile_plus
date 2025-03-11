@@ -60,7 +60,7 @@ export function PredictiveAnalysis() {
                           <p className="text-gray-900 dark:text-gray-100">{`Size: ${label}`}</p>
                           {payload.map((entry, index) => (
                             <p key={index} className="text-gray-900 dark:text-gray-100">
-                              {`${entry.name}: ${entry.value.toFixed(2)} hours`}
+                              {`${entry.name}: ${typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value} hours`}
                             </p>
                           ))}
                         </div>

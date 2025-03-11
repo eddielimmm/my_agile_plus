@@ -22,10 +22,15 @@ export function SignIn() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-      router.push("/")
+      router.push("/signin")
     } catch (error) {
       console.error("Sign in error:", error)
-      setError(error.message || "An error occurred during sign in")
+      
+      if (error instanceof Error) {
+        setError(error.message || "An error occurred during sign in")
+      } else {
+        setError("An unexpected error occurred during sign in")
+      }
     }
   }
 

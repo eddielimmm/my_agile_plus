@@ -1,12 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { useFolders } from "../contexts/folder-context"
+import { useFolders, type Folder } from "../contexts/folder-context"
 import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 
-const FolderView = ({ folders }) => {
+interface FolderViewProps {
+  folders: Folder[]
+}
+
+const FolderView = ({ folders }: FolderViewProps) => {
   const { deleteFolder } = useFolders()
   const [deletingFolder, setDeletingFolder] = useState<string | null>(null)
 

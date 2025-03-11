@@ -62,13 +62,13 @@ export function SmartRecommendations() {
 
   // Productivity Analysis
   const productiveHour = Object.entries(timeDistribution).reduce(
-    (max, [hour, time]) => (time > max.time ? { hour: Number.parseInt(hour), time: time as number } : max),
+    (max, [hour, time]) => ((time as number) > max.time ? { hour: Number.parseInt(hour), time: time as number } : max),
     { hour: 0, time: 0 },
   ).hour
 
   // Task Size Efficiency
   const mostEfficientSize = Object.entries(completionTimeAverages).reduce(
-    (min, [size, time]) => (time < min.time ? { size, time: time as number } : min),
+    (min, [size, time]) => ((time as number) < min.time ? { size, time: time as number } : min),
     { size: "", time: Number.POSITIVE_INFINITY },
   ).size
 

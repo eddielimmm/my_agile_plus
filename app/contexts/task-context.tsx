@@ -172,7 +172,17 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   const addTask = async (newTask: Omit<Task, "id" | "isCompleted" | "timeEntries" | "createdAt">) => {
     try {
-      const taskData = {
+      // Define the type of taskData to include folder property
+      const taskData: {
+        title: string;
+        size: TaskSize;
+        points: number;
+        due_date: string;
+        priority?: string;
+        description?: string;
+        user_id?: string;
+        folder?: string;  // Add folder to the type
+      } = {
         title: newTask.title,
         size: newTask.size,
         points: newTask.points,
@@ -211,8 +221,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           console.error("Error updating report after adding task:", error)
         }
       }
-    } catch (error) {
-      console.error("Error adding task:", error.message || error)
+    } catch (error: unknown) {
+      console.error("Error adding task:", error instanceof Error ? error.message : error)
       throw error
     }
   }
@@ -260,8 +270,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           console.error("Error updating report after updating task:", error)
         }
       }
-    } catch (error) {
-      console.error("Error updating task:", error.message || JSON.stringify(error))
+    } catch (error: unknown) {
+      console.error("Error updating task:", error instanceof Error ? error.message : JSON.stringify(error))
       throw error
     }
   }
@@ -285,8 +295,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           console.error("Error updating report after deleting task:", error)
         }
       }
-    } catch (error) {
-      console.error("Error deleting task:", error.message || error)
+    } catch (error: unknown) {
+      console.error("Error deleting task:", error instanceof Error ? error.message : error)
       throw error
     }
   }
@@ -483,8 +493,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           (acc, task) => {
             if (task.timeEntries) {
               task.timeEntries.forEach((entry) => {
-                if (entry.start_time && new Date(entry.start_time) <= date) {
-                  const hour = new Date(entry.start_time).getHours()
+                if (entry.startTime && new Date(entry.startTime) <= date) {
+                  const hour = new Date(entry.startTime).getHours()
                   acc[hour] = (acc[hour] || 0) + (entry.duration || 0)
                 }
               })

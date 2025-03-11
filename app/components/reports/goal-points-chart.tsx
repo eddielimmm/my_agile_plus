@@ -21,6 +21,8 @@ export function GoalPointsChart() {
   }, [user, timeRange])
 
   const fetchGoalPointsData = async (range: "day" | "week" | "month") => {
+    if (!user) return;
+    
     setIsLoading(true)
     try {
       // Calculate date range

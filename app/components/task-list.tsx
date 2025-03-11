@@ -18,6 +18,8 @@ import { differenceInDays } from "date-fns"
 import { useTaskContext } from "../contexts/task-context"
 import { useFolders } from "../contexts/folder-context"
 import { GoalPointsInput } from "./goal-points-input"
+import { getPathname } from '../utils/browser-utils'
+import ClientOnly from './client-only'
 
 type TaskSize = "XS" | "S" | "M" | "L" | "XL" | "XXL"
 type TaskPriority = "Low" | "Medium" | "High"
@@ -29,11 +31,12 @@ type Task = {
   points: number
   dueDate: Date
   folder: string | null
-  timeEntries: { date: string; duration: number; startTime: string }[]
+  timeEntries: { id: number; date: string; duration: number; startTime: string }[]
   isCompleted: boolean
   priority: TaskPriority
   description?: string
   createdAt: Date
+  completedAt: Date | null
 }
 
 type FolderType = {
@@ -70,25 +73,82 @@ export default function TaskList() {
   }, [newFolderName, addFolder])
 
   const handleAddTask = useCallback(
-    async (newTask: Omit<Task, "id" | "isCompleted" | "timeEntries" | "createdAt">) => {
-      await contextAddTask(newTask)
-      setIsCreateTaskDialogOpen(false)
+    async (newTask: Omit<Task, "id" | "isCompleted" | "createdAt" | "timeSpent">) => {
+      const taskForContext = {
+        ...newTask,
+        folder: newTask.folder === null ? undefined : newTask.folder,
+        timeEntries: [],
+        completedAt: null
+      };
+      
+      await contextAddTask(taskForContext);
+      setIsCreateTaskDialogOpen(false);
     },
     [contextAddTask],
   )
 
+  // Wrapper function to handle the type conversion
+  const createTaskWrapper = useCallback(
+    (task: Omit<import("../contexts/task-context").Task, "id" | "isCompleted" | "createdAt" | "timeSpent">) => {
+      // Convert the task from context type to local type before passing to handleAddTask
+      const adaptedTask = {
+        ...task,
+        // Convert undefined to null to match our local Task type
+        folder: task.folder === undefined ? null : task.folder
+      };
+      
+      // Call our existing handleAddTask with the adapted task
+      handleAddTask(adaptedTask as any);
+    },
+    [handleAddTask]
+  );
+
+  // Move editTask before editTaskWrapper
   const editTask = useCallback(
     async (editedTask: Task) => {
-      await updateTask(editedTask)
-      setIsEditTaskDialogOpen(false)
-      setEditingTask(null)
+      // Ensure the edited task has the required completedAt property and correct timeEntries format
+      const taskWithRequiredFields = {
+        ...editedTask,
+        completedAt: editedTask.completedAt || null,
+        folder: editedTask.folder === null ? undefined : editedTask.folder,
+        // Ensure each time entry has an id
+        timeEntries: editedTask.timeEntries.map(entry => ({
+          ...entry,
+          id: entry.id || Math.floor(Math.random() * 1000000) // Provide an id if missing
+        }))
+      };
+      
+      await updateTask(taskWithRequiredFields);
+      setIsEditTaskDialogOpen(false);
+      setEditingTask(null);
     },
     [updateTask],
   )
 
+  // Now define editTaskWrapper which uses editTask
+  const editTaskWrapper = useCallback(
+    (task: import("../contexts/task-context").Task) => {
+      // Convert the task from context type to local type before passing to editTask
+      const adaptedTask = {
+        ...task,
+        // Convert undefined to null to match our local Task type
+        folder: task.folder === undefined ? null : task.folder
+      } as Task;
+      
+      // Call our existing editTask with the adapted task
+      editTask(adaptedTask);
+    },
+    [editTask]
+  );
+
   const handleCompleteTask = useCallback(
     (completedTask: Task) => {
-      updateTask(completedTask)
+      // Convert null folder to undefined to match the expected type
+      const taskWithCompatibleTypes = {
+        ...completedTask,
+        folder: completedTask.folder === null ? undefined : completedTask.folder
+      };
+      updateTask(taskWithCompatibleTypes);
     },
     [updateTask],
   )
@@ -109,18 +169,10 @@ export default function TaskList() {
     //)
   }, [])
 
-  const getFolderProgress = useCallback(
-    (folderName: string) => {
-      const folderTasks = tasks.filter((task) => task.folder === folderName)
-      const completedTasks = folderTasks.filter((task) => task.isCompleted).length
-      const totalTasks = folderTasks.length
-      const dominantSize = getDominantSize(folderTasks)
-      return { completedTasks, totalTasks, dominantSize }
-    },
-    [tasks],
-  )
-
   const getDominantSize = useCallback((folderTasks: Task[]): TaskSize => {
+    // If no tasks, return default size
+    if (folderTasks.length === 0) return "M" as TaskSize;
+    
     const sizeCounts = folderTasks.reduce(
       (acc, task) => {
         acc[task.size] = (acc[task.size] || 0) + 1
@@ -129,11 +181,41 @@ export default function TaskList() {
       {} as Record<TaskSize, number>,
     )
 
-    return Object.entries(sizeCounts).reduce(
-      (a, b) => (sizeCounts[a as TaskSize] > sizeCounts[b[0] as TaskSize] ? a : b[0]),
-      "M" as TaskSize,
-    ) as TaskSize
+    // Fix the reduce function with proper typing
+    const entries = Object.entries(sizeCounts) as [TaskSize, number][];
+    
+    if (entries.length === 0) return "M" as TaskSize;
+    
+    let dominantSize: TaskSize = "M";
+    let maxCount = 0;
+    
+    for (const [size, count] of entries) {
+      if (count > maxCount) {
+        maxCount = count;
+        dominantSize = size;
+      }
+    }
+    
+    return dominantSize;
   }, [])
+
+  const getFolderProgress = useCallback(
+    (folderName: string) => {
+      const folderTasks = tasks.filter((task) => task.folder === folderName)
+      const completedTasks = folderTasks.filter((task) => task.isCompleted).length
+      const totalTasks = folderTasks.length
+      
+      // Convert tasks to our local Task type before passing to getDominantSize
+      const convertedTasks = folderTasks.map(task => ({
+        ...task,
+        folder: task.folder || null // Convert undefined to null
+      })) as Task[];
+      
+      const dominantSize = getDominantSize(convertedTasks)
+      return { completedTasks, totalTasks, dominantSize }
+    },
+    [tasks, getDominantSize],
+  )
 
   const sortedTasks = useMemo(() => {
     const sortedTasks = [...tasks]
@@ -169,6 +251,63 @@ export default function TaskList() {
     setEditingTask(task)
     setIsEditTaskDialogOpen(true)
   }, [])
+
+  // Create a wrapper for handleEditTask to handle type conversion
+  const handleEditTaskWrapper = useCallback(
+    (task: Task) => {
+      // Convert our local Task type to the one expected by handleEditTask
+      const contextTask = {
+        ...task,
+        folder: task.folder === null ? undefined : task.folder,
+      } as any; // Use 'any' to bridge between the two Task types
+      
+      handleEditTask(contextTask);
+    },
+    [handleEditTask]
+  );
+
+  // Create a specific wrapper for TaskCard onEdit
+  const taskCardEditWrapper = useCallback(
+    (cardTask: any) => {
+      // This wrapper converts from the TaskCard's Task type to our local Task type
+      const localTask = {
+        ...cardTask,
+        // Ensure folder is properly converted
+        folder: cardTask.folder === "none" ? null : cardTask.folder
+      } as Task;
+      
+      // Pass it to our handleEditTask which handles conversion to context Task
+      handleEditTaskWrapper(localTask);
+    },
+    [handleEditTaskWrapper]
+  );
+
+  // Create a wrapper for the handleCompleteTask function
+  const handleCompleteTaskWrapper = useCallback(
+    (cardTask: any) => {
+      // Convert from TaskCard's Task type to our local Task type
+      const localTask = {
+        ...cardTask,
+        // Ensure folder is properly converted
+        folder: cardTask.folder === "none" ? null : cardTask.folder
+      } as Task;
+      
+      // Call our existing handleCompleteTask which handles conversion to context Task
+      handleCompleteTask(localTask);
+    },
+    [handleCompleteTask]
+  );
+
+  // Create a wrapper for folders to convert id from string to number
+  const folderTypeMapping = useMemo(() => {
+    return folders.map(folder => ({
+      ...folder,
+      id: typeof folder.id === 'string' ? parseInt(folder.id, 10) : folder.id
+    }));
+  }, [folders]);
+
+  // Use the safe version inside a component method
+  const getCurrentPath = () => getPathname();
 
   return (
     <div className="space-y-6">
@@ -232,8 +371,8 @@ export default function TaskList() {
       <CreateTaskDialog
         isOpen={isCreateTaskDialogOpen}
         onClose={() => setIsCreateTaskDialogOpen(false)}
-        onCreateTask={handleAddTask}
-        folders={folders}
+        onCreateTask={createTaskWrapper}
+        folders={folderTypeMapping}
       />
 
       {editingTask && (
@@ -243,9 +382,13 @@ export default function TaskList() {
             setIsEditTaskDialogOpen(false)
             setEditingTask(null)
           }}
-          onEditTask={editTask}
-          task={editingTask}
-          folders={folders}
+          onEditTask={editTaskWrapper}
+          task={{
+            ...editingTask,
+            // Convert null folder to undefined directly here
+            folder: editingTask.folder === null ? undefined : editingTask.folder
+          }}
+          folders={folderTypeMapping}
         />
       )}
 
@@ -297,15 +440,26 @@ export default function TaskList() {
             <div className="mb-6">
               <h4 className="text-lg font-semibold mb-3 text-gray-900">Recent Tasks</h4>
               <div className="grid gap-4">
-                {recentTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onEdit={handleEditTask}
-                    onComplete={handleCompleteTask}
-                    onDelete={handleDeleteTask}
-                  />
-                ))}
+                {recentTasks.map((task) => {
+                  const { priority, ...taskWithoutPriority } = task;
+                  return (
+                    <TaskCard
+                      key={task.id}
+                      task={{
+                        ...taskWithoutPriority,
+                        folder: task.folder || "none",
+                        priority: (priority || "Medium") as TaskPriority,
+                        timeEntries: task.timeEntries.map(entry => ({
+                          ...entry,
+                          start_time: entry.startTime || "00:00"
+                        }))
+                      }}
+                      onEdit={taskCardEditWrapper}
+                      onComplete={handleCompleteTaskWrapper}
+                      onDelete={handleDeleteTask}
+                    />
+                  );
+                })}
               </div>
             </div>
           )}
@@ -315,15 +469,26 @@ export default function TaskList() {
             <div className="mb-6">
               <h4 className="text-lg font-semibold mb-3 text-gray-900">Tasks Due Soon</h4>
               <div className="grid gap-4">
-                {closeToDueDateTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onEdit={handleEditTask}
-                    onComplete={handleCompleteTask}
-                    onDelete={handleDeleteTask}
-                  />
-                ))}
+                {closeToDueDateTasks.map((task) => {
+                  const { priority, ...taskWithoutPriority } = task;
+                  return (
+                    <TaskCard
+                      key={task.id}
+                      task={{
+                        ...taskWithoutPriority,
+                        folder: task.folder || "none",
+                        priority: (priority || "Medium") as TaskPriority,
+                        timeEntries: task.timeEntries.map(entry => ({
+                          ...entry,
+                          start_time: entry.startTime || "00:00"
+                        }))
+                      }}
+                      onEdit={taskCardEditWrapper}
+                      onComplete={handleCompleteTaskWrapper}
+                      onDelete={handleDeleteTask}
+                    />
+                  );
+                })}
               </div>
             </div>
           )}
@@ -350,15 +515,26 @@ export default function TaskList() {
             </Card>
           ) : (
             <div className="grid gap-4">
-              {sortedTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onEdit={handleEditTask}
-                  onComplete={handleCompleteTask}
-                  onDelete={handleDeleteTask}
-                />
-              ))}
+              {sortedTasks.map((task) => {
+                const { priority, ...taskWithoutPriority } = task;
+                return (
+                  <TaskCard
+                    key={task.id}
+                    task={{
+                      ...taskWithoutPriority,
+                      folder: task.folder || "none",
+                      priority: (priority || "Medium") as TaskPriority,
+                      timeEntries: task.timeEntries.map(entry => ({
+                        ...entry,
+                        start_time: entry.startTime || "00:00"
+                      }))
+                    }}
+                    onEdit={taskCardEditWrapper}
+                    onComplete={handleCompleteTaskWrapper}
+                    onDelete={handleDeleteTask}
+                  />
+                );
+              })}
             </div>
           )}
         </TabsContent>
@@ -390,7 +566,15 @@ export default function TaskList() {
                 const folderTasks = tasks.filter((task) => task.folder === folder.name)
                 const completedTasks = folderTasks.filter((task) => task.isCompleted).length
                 const totalTasks = folderTasks.length
-                const dominantSize = getDominantSize(folderTasks)
+                
+                // Convert tasks to our local Task type before passing to getDominantSize
+                const convertedTasks = folderTasks.map(task => ({
+                  ...task,
+                  folder: task.folder || null // Convert undefined to null
+                })) as Task[];
+                
+                const dominantSize = getDominantSize(convertedTasks)
+                
                 return (
                   <Collapsible key={folder.id} className="w-full">
                     <Card className="hover:shadow-lg transition-all duration-200 border-0 dark:bg-gray-800">
@@ -413,15 +597,26 @@ export default function TaskList() {
                     </Card>
                     <CollapsibleContent>
                       <div className="mt-2 ml-6 space-y-2">
-                        {folderTasks.map((task) => (
-                          <TaskCard
-                            key={task.id}
-                            task={task}
-                            onEdit={handleEditTask}
-                            onComplete={handleCompleteTask}
-                            onDelete={handleDeleteTask}
-                          />
-                        ))}
+                        {folderTasks.map((task) => {
+                          const { priority, ...taskWithoutPriority } = task;
+                          return (
+                            <TaskCard
+                              key={task.id}
+                              task={{
+                                ...taskWithoutPriority,
+                                folder: task.folder || "none",
+                                priority: (priority || "Medium") as TaskPriority,
+                                timeEntries: task.timeEntries.map(entry => ({
+                                  ...entry,
+                                  start_time: entry.startTime || "00:00"
+                                }))
+                              }}
+                              onEdit={taskCardEditWrapper}
+                              onComplete={handleCompleteTaskWrapper}
+                              onDelete={handleDeleteTask}
+                            />
+                          );
+                        })}
                         {folderTasks.length === 0 && (
                           <div className="flex flex-col items-center justify-center py-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <p className="text-sm text-gray-600 dark:text-gray-300">No tasks in this folder yet.</p>
@@ -445,6 +640,11 @@ export default function TaskList() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Dynamic content that needs browser APIs */}
+      <ClientOnly>
+        <div>Current path: {getCurrentPath()}</div>
+      </ClientOnly>
     </div>
   )
 }

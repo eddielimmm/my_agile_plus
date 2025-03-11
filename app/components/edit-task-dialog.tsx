@@ -181,15 +181,14 @@ export function EditTaskDialog({ isOpen, onClose, onEditTask, task, folders }: E
             <Select
               value={folder}
               onValueChange={setFolder}
-              className="dark:bg-gray-700 dark:text-white dark:border-gray-600"
             >
-              <SelectTrigger className="h-10 border-2">
+              <SelectTrigger className="h-10 border-2 dark:bg-gray-700 dark:text-white dark:border-gray-600">
                 <SelectValue placeholder="Select a folder" />
               </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="none">No Folder</SelectItem>
+              <SelectContent className="bg-white dark:bg-gray-800">
+                <SelectItem value="none" className="dark:text-white">No Folder</SelectItem>
                 {folders.map((folder) => (
-                  <SelectItem key={folder.id} value={folder.name}>
+                  <SelectItem key={folder.id} value={folder.name} className="dark:text-white">
                     {folder.name}
                   </SelectItem>
                 ))}
