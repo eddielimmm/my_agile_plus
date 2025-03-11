@@ -17,13 +17,12 @@ if (typeof window !== "undefined") {
 }
 
 type TaskSize = "XS" | "S" | "M" | "L" | "XL" | "XXL"
-type TaskPriority = "Low" | "Medium" | "High"
 
 interface TimeEntry {
   duration: number
 }
 
-// Update this to match your task-context's Task interface
+// Update this to match your task-context's Task interface - removed priority
 interface CalendarProps {
   tasks: {
     id: number
@@ -32,13 +31,12 @@ interface CalendarProps {
     dueDate: Date
     isCompleted: boolean
     timeEntries?: TimeEntry[]
-    priority?: TaskPriority
     description?: string
-    [key: string]: any  // Accept any other properties from the task context
+    [key: string]: any
   }[]
 }
 
-// This is the internal Task type used within the Calendar component
+// This is the internal Task type used within the Calendar component - removed priority
 interface CalendarTask {
   id: number
   title: string
@@ -46,7 +44,6 @@ interface CalendarTask {
   dueDate: Date
   isCompleted: boolean
   timeSpent: number
-  priority: TaskPriority
   description?: string
 }
 
@@ -60,10 +57,9 @@ const sizeColors = {
 }
 
 export function Calendar({ tasks }: CalendarProps) {
-  // Map incoming tasks to our internal format with timeSpent
+  // Map incoming tasks to our internal format with timeSpent - removed priority
   const processedTasks = tasks.map(task => ({
     ...task,
-    priority: task.priority || "Medium", // Set a default priority if missing
     timeSpent: task.timeEntries ? 
       task.timeEntries.reduce((total, entry) => total + (entry.duration || 0), 0) : 0
   })) as CalendarTask[]
@@ -163,7 +159,6 @@ const TaskTooltip: React.FC<{ task: CalendarTask }> = ({ task }) => (
     <CardContent className="p-4">
       <h3 className="font-bold mb-2 dark:text-gray-100">{task.title}</h3>
       <p className="dark:text-gray-300">Size: {task.size}</p>
-      <p className="dark:text-gray-300">Priority: {task.priority}</p>
       <p className="dark:text-gray-300">Time Spent: {formatTime(task.timeSpent)}</p>
       <p className="dark:text-gray-300">Status: {task.isCompleted ? "Completed" : "In Progress"}</p>
     </CardContent>
@@ -186,9 +181,6 @@ const TaskDetails: React.FC<{ task: CalendarTask; onClose: () => void }> = ({ ta
         <div className="space-y-2 dark:text-gray-300">
           <p>
             <span className="font-semibold">Size:</span> {task.size}
-          </p>
-          <p>
-            <span className="font-semibold">Priority:</span> {task.priority}
           </p>
           <p>
             <span className="font-semibold">Due Date:</span> {task.dueDate.toLocaleDateString()}
