@@ -19,6 +19,10 @@ if (typeof window !== "undefined") {
 type TaskSize = "XS" | "S" | "M" | "L" | "XL" | "XXL"
 type TaskPriority = "Low" | "Medium" | "High"
 
+interface TimeEntry {
+  duration: number
+}
+
 interface Task {
   id: number
   title: string
@@ -26,6 +30,7 @@ interface Task {
   dueDate: Date
   isCompleted: boolean
   timeSpent: number
+  timeEntries?: TimeEntry[]
   priority: TaskPriority
   description?: string
 }
@@ -44,12 +49,18 @@ const sizeColors = {
 }
 
 export function Calendar({ tasks }: CalendarProps) {
+  const processedTasks = tasks.map(task => ({
+    ...task,
+    timeSpent: task.timeSpent !== undefined ? task.timeSpent : 
+      (task.timeEntries ? task.timeEntries.reduce((total, entry) => total + (entry.duration || 0), 0) : 0)
+  }))
+  
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [events, setEvents] = useState<any[]>([])
 
   useEffect(() => {
     setEvents(
-      tasks.map((task) => ({
+      processedTasks.map((task) => ({
         id: task.id,
         title: task.title,
         start: new Date(task.dueDate),
@@ -58,7 +69,7 @@ export function Calendar({ tasks }: CalendarProps) {
         resource: task,
       })),
     )
-  }, [tasks])
+  }, [processedTasks])
 
   const eventStyleGetter = useCallback((event: any) => {
     const task = event.resource as Task
